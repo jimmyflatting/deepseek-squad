@@ -188,24 +188,29 @@ func (t *TmuxSession) Start(workDir string) error {
 		log.InfoLog.Printf("Warning: failed to forward some env vars to session %s: %v", t.sanitizedName, err)
 	}
 
-	// Phase 3: Launch the program via send-keys (after env vars have been forwarded).
-	// Using send-keys means the program inherits the tmux session environment
-	// (including env vars set by set-environment above).
+	// Phase 3: Launch the program in a new window (after env vars have been forwarded).
+	// Using new-window means the program inherits the tmux session environment
+	// (including env vars set by set-environment above), unlike send-keys which
+	// types into the existing shell that already captured its environment at
+	// pane-creation time.
 	if t.program != "" {
-		sendCmd := exec.Command("tmux", "send-keys", "-t", t.sanitizedName, "-l", t.program)
-		if err := t.cmdExec.Run(sendCmd); err != nil {
+		programParts := strings.Fields(t.program)
+		args := []string{"new-window", "-t", t.sanitizedName, "-d", "-c", workDir, "--"}
+		args = append(args, programParts...)
+		newWindowCmd := exec.Command("tmux", args...)
+		if err := t.cmdExec.Run(newWindowCmd); err != nil {
 			if cleanupErr := t.Close(); cleanupErr != nil {
 				err = fmt.Errorf("%v (cleanup error: %v)", err, cleanupErr)
 			}
-			return fmt.Errorf("error sending program command to tmux session: %w", err)
+			return fmt.Errorf("error creating new window for program in tmux session: %w", err)
 		}
 
-		enterCmd := exec.Command("tmux", "send-keys", "-t", t.sanitizedName, "Enter")
-		if err := t.cmdExec.Run(enterCmd); err != nil {
-			if cleanupErr := t.Close(); cleanupErr != nil {
-				err = fmt.Errorf("%v (cleanup error: %v)", err, cleanupErr)
-			}
-			return fmt.Errorf("error sending Enter to tmux session: %w", err)
+		// Kill the initial empty shell window that was created by new-session.
+		// The program is running in window 1, so window 0 (the empty shell) is
+		// no longer needed. This failure is non-fatal (logged as warning).
+		killWindowCmd := exec.Command("tmux", "kill-window", "-t", fmt.Sprintf("%s:0", t.sanitizedName))
+		if err := t.cmdExec.Run(killWindowCmd); err != nil {
+			log.InfoLog.Printf("Warning: failed to kill initial window for session %s: %v", t.sanitizedName, err)
 		}
 	}
 
