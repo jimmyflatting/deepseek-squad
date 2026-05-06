@@ -44,6 +44,11 @@ type Config struct {
 	BranchPrefix string `json:"branch_prefix"`
 	// Profiles is a list of named program profiles.
 	Profiles []Profile `json:"profiles,omitempty"`
+	// EnvVarPrefixes is a list of environment variable prefixes to forward
+	// from the parent process into each tmux session. Only environment
+	// variables starting with any of these prefixes will be forwarded.
+	// Defaults to ["ANTHROPIC_", "OPENAI_", "GEMINI_"].
+	EnvVarPrefixes []string `json:"env_var_prefixes,omitempty"`
 }
 
 // GetProgram returns the program to run. If Profiles is non-empty and
@@ -101,6 +106,11 @@ func DefaultConfig() *Config {
 			}
 			return fmt.Sprintf("%s/", strings.ToLower(user.Username))
 		}(),
+		EnvVarPrefixes: []string{
+			"ANTHROPIC_",
+			"OPENAI_",
+			"GEMINI_",
+		},
 	}
 }
 

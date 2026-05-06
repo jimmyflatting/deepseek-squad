@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"deepseek-squad/config"
 	"deepseek-squad/keys"
 	"deepseek-squad/log"
@@ -8,7 +9,6 @@ import (
 	"deepseek-squad/session/git"
 	"deepseek-squad/ui"
 	"deepseek-squad/ui/overlay"
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -619,9 +619,10 @@ func (m *home) handleKeyPress(msg tea.KeyMsg) (mod tea.Model, cmd tea.Cmd) {
 		}
 
 		instance, err := session.NewInstance(session.InstanceOptions{
-			Title:   "",
-			Path:    ".",
-			Program: m.program,
+			Title:          "",
+			Path:           ".",
+			Program:        m.program,
+			EnvVarPrefixes: m.appConfig.EnvVarPrefixes,
 		})
 		if err != nil {
 			return m, m.handleError(err)
@@ -640,9 +641,10 @@ func (m *home) handleKeyPress(msg tea.KeyMsg) (mod tea.Model, cmd tea.Cmd) {
 				fmt.Errorf("you can't create more than %d instances", GlobalInstanceLimit))
 		}
 		instance, err := session.NewInstance(session.InstanceOptions{
-			Title:   "",
-			Path:    ".",
-			Program: m.program,
+			Title:          "",
+			Path:           ".",
+			Program:        m.program,
+			EnvVarPrefixes: m.appConfig.EnvVarPrefixes,
 		})
 		if err != nil {
 			return m, m.handleError(err)

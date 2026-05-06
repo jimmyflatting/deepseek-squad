@@ -108,6 +108,10 @@ func TestDefaultConfig(t *testing.T) {
 		assert.Equal(t, 1000, config.DaemonPollInterval)
 		assert.NotEmpty(t, config.BranchPrefix)
 		assert.True(t, strings.HasSuffix(config.BranchPrefix, "/"))
+		assert.NotNil(t, config.EnvVarPrefixes)
+		assert.Contains(t, config.EnvVarPrefixes, "ANTHROPIC_")
+		assert.Contains(t, config.EnvVarPrefixes, "OPENAI_")
+		assert.Contains(t, config.EnvVarPrefixes, "GEMINI_")
 	})
 
 }
@@ -155,7 +159,8 @@ func TestLoadConfig(t *testing.T) {
 			"default_program": "test-claude",
 			"auto_yes": true,
 			"daemon_poll_interval": 2000,
-			"branch_prefix": "test/"
+			"branch_prefix": "test/",
+			"env_var_prefixes": ["MY_APP_", "CUSTOM_"]
 		}`
 		err = os.WriteFile(configPath, []byte(configContent), 0644)
 		require.NoError(t, err)
@@ -172,6 +177,7 @@ func TestLoadConfig(t *testing.T) {
 		assert.True(t, config.AutoYes)
 		assert.Equal(t, 2000, config.DaemonPollInterval)
 		assert.Equal(t, "test/", config.BranchPrefix)
+		assert.Equal(t, []string{"MY_APP_", "CUSTOM_"}, config.EnvVarPrefixes)
 	})
 
 	t.Run("returns default config on invalid JSON", func(t *testing.T) {
