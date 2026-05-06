@@ -49,17 +49,35 @@ This is a Go TUI application (Bubble Tea framework) that manages multiple AI cod
 
 ## Environment Variables for Spawned Agents
 
-When `ds` spawns an AI agent (e.g., `claude`), the agent inherits environment variables through Go's `exec.Command` default behavior — the tmux process started at `session/tmux/tmux.go:98` gets `os.Environ()` from the `cs` process, and passes it to the agent running inside tmux.
+When `ds` spawns an AI agent inside a tmux session, environment variables are forwarded in a two-phase flow:
 
-To use DeepSeek models, set these in your shell before running `ds`:
+1. **Session creation**: `tmux new-session` inherits the parent process's environment via `cmd.Env = os.Environ()`.
+2. **Env var forwarding**: After session creation, variables matching configured prefixes are forwarded into the tmux session environment table via `tmux set-environment`. Then the program is launched in a **new window** (`tmux new-window -- <program>`) which inherits the updated session environment.
+
+This approach (new-window instead of send-keys) ensures the spawned agent sees forwarded env vars, unlike the old approach which typed the program into an existing shell that had already captured its environment at pane-creation time.
+
+### Configuring which env vars are forwarded
+
+Set `env_var_prefixes` in `~/.deepseek-squad/config.json` to control which environment variables are forwarded:
+
+```json
+{
+  "env_var_prefixes": ["ANTHROPIC_", "OPENAI_", "GEMINI_"]
+}
+```
+
+Defaults: `["ANTHROPIC_", "OPENAI_", "GEMINI_"]`.
+
+### Example: Using DeepSeek models with Claude
 
 ```bash
 export ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
 export ANTHROPIC_AUTH_TOKEN=<your-deepseek-api-key>
-export ANTHROPIC_MODEL=deepseek-v4-pro[1m]
-export ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-v4-pro[1m]
-export ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-v4-pro[1m]
+export ANTHROPIC_MODEL=deepseek-v4-pro
+export ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-v4-pro
+export ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-v4-pro
 export ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-v4-flash
+ds
 ```
 
 The same principle applies for other agents: `OPENAI_API_KEY` for Codex, etc.

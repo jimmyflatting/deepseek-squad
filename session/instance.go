@@ -58,6 +58,10 @@ type Instance struct {
 	// selectedBranch is the existing branch to start on (empty = new branch from HEAD)
 	selectedBranch string
 
+	// envVarPrefixes is the list of environment variable prefixes to forward
+	// to the tmux session. If nil, the tmux session default is used.
+	envVarPrefixes []string
+
 	// The below fields are initialized upon calling Start().
 
 	started bool
@@ -136,6 +140,7 @@ func FromInstanceData(data InstanceData) (*Instance, error) {
 	if instance.Paused() {
 		instance.started = true
 		instance.tmuxSession = tmux.NewTmuxSession(instance.Title, instance.Program)
+		instance.tmuxSession.SetEnvVarPrefixes(instance.envVarPrefixes...)
 	} else {
 		if err := instance.Start(false); err != nil {
 			return nil, err
@@ -157,6 +162,9 @@ type InstanceOptions struct {
 	AutoYes bool
 	// Branch is an existing branch name to start the session on (empty = new branch from HEAD)
 	Branch string
+	// EnvVarPrefixes is a list of environment variable prefixes to forward
+	// to the tmux session. If nil, the tmux session default (ANTHROPIC_) is used.
+	EnvVarPrefixes []string
 }
 
 func NewInstance(opts InstanceOptions) (*Instance, error) {
@@ -179,6 +187,7 @@ func NewInstance(opts InstanceOptions) (*Instance, error) {
 		UpdatedAt:      t,
 		AutoYes:        false,
 		selectedBranch: opts.Branch,
+		envVarPrefixes: opts.EnvVarPrefixes,
 	}, nil
 }
 
@@ -211,6 +220,7 @@ func (i *Instance) Start(firstTimeSetup bool) error {
 	} else {
 		// Create new tmux session
 		tmuxSession = tmux.NewTmuxSession(i.Title, i.Program)
+		tmuxSession.SetEnvVarPrefixes(i.envVarPrefixes...)
 	}
 	i.tmuxSession = tmuxSession
 
