@@ -140,6 +140,23 @@ Each profile has two fields:
 
 If no profiles are defined, Claude Squad uses `default_program` directly as the launch command (the default is `claude`).
 
+### Custom API Endpoints
+
+When `ds` spawns an AI agent, the agent inherits the environment variables from the `ds` process. This allows you to configure custom API endpoints for different providers.
+
+To use DeepSeek models through the Anthropic API compatible interface, set these environment variables in your shell before running `ds`:
+
+```bash
+export ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+export ANTHROPIC_AUTH_TOKEN=<your-deepseek-api-key>
+export ANTHROPIC_MODEL=deepseek-v4-pro
+export ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-v4-pro
+export ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-v4-pro
+export ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-v4-flash
+```
+
+The same principle applies for other providers — set the appropriate environment variables for your chosen agent before running `ds`.
+
 ### FAQs
 
 #### Failed to start new session
