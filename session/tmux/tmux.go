@@ -130,6 +130,12 @@ func (t *TmuxSession) forwardEnvVars() error {
 
 // Start creates and starts a new tmux session, then attaches to it. Program is the command to run in
 // the session (ex. claude). workdir is the git worktree directory.
+//
+// Start uses a two-phase flow to ensure environment variables are forwarded
+// before the AI agent program launches:
+//  1. Create tmux session WITHOUT the program (starts an empty shell)
+//  2. Forward env vars via tmux set-environment
+//  3. Launch the program via tmux send-keys
 func (t *TmuxSession) Start(workDir string) error {
 
 	// Check if the session already exists
@@ -137,8 +143,9 @@ func (t *TmuxSession) Start(workDir string) error {
 		return fmt.Errorf("tmux session already exists: %s", t.sanitizedName)
 	}
 
-	// Create a new detached tmux session and start claude in it
-	cmd := exec.Command("tmux", "new-session", "-d", "-s", t.sanitizedName, "-c", workDir, t.program)
+	// Phase 1: Create a new detached tmux session WITHOUT the program.
+	// The program will be launched later (after env var forwarding) via send-keys.
+	cmd := exec.Command("tmux", "new-session", "-d", "-s", t.sanitizedName, "-c", workDir)
 
 	cmd.Env = os.Environ()
 
@@ -174,11 +181,32 @@ func (t *TmuxSession) Start(workDir string) error {
 	}
 	ptmx.Close()
 
-	// Forward environment variables with matching prefixes to the tmux session.
+	// Phase 2: Forward environment variables with matching prefixes to the tmux session.
 	// This is necessary because an existing tmux server maintains its own global
 	// environment and does not inherit env vars set via cmd.Env on the new-session subprocess.
 	if err := t.forwardEnvVars(); err != nil {
 		log.InfoLog.Printf("Warning: failed to forward some env vars to session %s: %v", t.sanitizedName, err)
+	}
+
+	// Phase 3: Launch the program via send-keys (after env vars have been forwarded).
+	// Using send-keys means the program inherits the tmux session environment
+	// (including env vars set by set-environment above).
+	if t.program != "" {
+		sendCmd := exec.Command("tmux", "send-keys", "-t", t.sanitizedName, "-l", t.program)
+		if err := t.cmdExec.Run(sendCmd); err != nil {
+			if cleanupErr := t.Close(); cleanupErr != nil {
+				err = fmt.Errorf("%v (cleanup error: %v)", err, cleanupErr)
+			}
+			return fmt.Errorf("error sending program command to tmux session: %w", err)
+		}
+
+		enterCmd := exec.Command("tmux", "send-keys", "-t", t.sanitizedName, "Enter")
+		if err := t.cmdExec.Run(enterCmd); err != nil {
+			if cleanupErr := t.Close(); cleanupErr != nil {
+				err = fmt.Errorf("%v (cleanup error: %v)", err, cleanupErr)
+			}
+			return fmt.Errorf("error sending Enter to tmux session: %w", err)
+		}
 	}
 
 	// Set history limit to enable scrollback (default is 2000, we'll use 10000 for more history)
