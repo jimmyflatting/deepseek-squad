@@ -2,10 +2,10 @@ package tmux
 
 import (
 	"bytes"
-	"deepseek-squad/cmd"
-	"deepseek-squad/log"
 	"context"
 	"crypto/sha256"
+	"deepseek-squad/cmd"
+	"deepseek-squad/log"
 	"errors"
 	"fmt"
 	"io"
@@ -35,6 +35,10 @@ type TmuxSession struct {
 	ptyFactory PtyFactory
 	// cmdExec is used to execute commands in the tmux session.
 	cmdExec cmd.Executor
+	// envVarPrefixes is a list of prefixes used to filter which environment
+	// variables from the parent process are forwarded into the tmux session
+	// via tmux set-environment after session creation. Defaults to ["ANTHROPIC_"].
+	envVarPrefixes []string
 
 	// Initialized by Start or Restore
 	//
@@ -79,16 +83,55 @@ func NewTmuxSessionWithDeps(name string, program string, ptyFactory PtyFactory, 
 
 func newTmuxSession(name string, program string, ptyFactory PtyFactory, cmdExec cmd.Executor) *TmuxSession {
 	return &TmuxSession{
-		sanitizedName: toClaudeSquadTmuxName(name),
-		program:       program,
-		ptyFactory:    ptyFactory,
-		cmdExec:       cmdExec,
+		sanitizedName:  toClaudeSquadTmuxName(name),
+		program:        program,
+		ptyFactory:     ptyFactory,
+		cmdExec:        cmdExec,
+		envVarPrefixes: []string{"ANTHROPIC_"},
 	}
+}
+
+// SetEnvVarPrefixes sets the environment variable prefixes to forward to the tmux session.
+// Only environment variables starting with any of these prefixes will be forwarded
+// from the parent process into the tmux session via tmux set-environment after session creation.
+// If called with no arguments, no environment variables are forwarded.
+func (t *TmuxSession) SetEnvVarPrefixes(prefixes ...string) {
+	t.envVarPrefixes = prefixes
+}
+
+// forwardEnvVars forwards matching environment variables from the parent process
+// to the tmux session using tmux set-environment. This is needed because when a
+// tmux server already exists, it maintains its own global environment and does
+// not inherit from the ds process's environment.
+func (t *TmuxSession) forwardEnvVars() error {
+	var errs []error
+	for _, env := range os.Environ() {
+		for _, prefix := range t.envVarPrefixes {
+			if strings.HasPrefix(env, prefix) {
+				eqIdx := strings.Index(env, "=")
+				if eqIdx < 0 {
+					continue
+				}
+				key := env[:eqIdx]
+				value := env[eqIdx+1:]
+				cmd := exec.Command("tmux", "set-environment", "-t", t.sanitizedName, key, value)
+				if err := t.cmdExec.Run(cmd); err != nil {
+					errs = append(errs, fmt.Errorf("failed to set env var %s: %w", key, err))
+				}
+				break
+			}
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to forward environment variables: %v", errs)
+	}
+	return nil
 }
 
 // Start creates and starts a new tmux session, then attaches to it. Program is the command to run in
 // the session (ex. claude). workdir is the git worktree directory.
 func (t *TmuxSession) Start(workDir string) error {
+
 	// Check if the session already exists
 	if t.DoesSessionExist() {
 		return fmt.Errorf("tmux session already exists: %s", t.sanitizedName)
@@ -130,6 +173,13 @@ func (t *TmuxSession) Start(workDir string) error {
 		}
 	}
 	ptmx.Close()
+
+	// Forward environment variables with matching prefixes to the tmux session.
+	// This is necessary because an existing tmux server maintains its own global
+	// environment and does not inherit env vars set via cmd.Env on the new-session subprocess.
+	if err := t.forwardEnvVars(); err != nil {
+		log.InfoLog.Printf("Warning: failed to forward some env vars to session %s: %v", t.sanitizedName, err)
+	}
 
 	// Set history limit to enable scrollback (default is 2000, we'll use 10000 for more history)
 	historyCmd := exec.Command("tmux", "set-option", "-t", t.sanitizedName, "history-limit", "10000")
