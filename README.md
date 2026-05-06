@@ -1,9 +1,9 @@
-# Claude Squad [![CI](https://github.com/smtg-ai/claude-squad/actions/workflows/build.yml/badge.svg)](https://github.com/smtg-ai/claude-squad/actions/workflows/build.yml) [![GitHub Release](https://img.shields.io/github/v/release/smtg-ai/claude-squad)](https://github.com/smtg-ai/claude-squad/releases/latest)
+# DeepSeek Squad [![CI](https://github.com/jimmyflatting/deepseek-squad/actions/workflows/build.yml/badge.svg)](https://github.com/jimmyflatting/deepseek-squad/actions/workflows/build.yml) [![GitHub Release](https://img.shields.io/github/v/release/jimmyflatting/deepseek-squad)](https://github.com/jimmyflatting/deepseek-squad/releases/latest)
 
-[Claude Squad](https://smtg-ai.github.io/claude-squad/) is a terminal app that manages multiple [Claude Code](https://github.com/anthropics/claude-code), [Codex](https://github.com/openai/codex), [Gemini](https://github.com/google-gemini/gemini-cli) (and other local agents including [Aider](https://github.com/Aider-AI/aider)) in separate workspaces, allowing you to work on multiple tasks simultaneously.
+[DeepSeek Squad](https://jimmyflatting.github.io/deepseek-squad/) is a terminal app that manages multiple [Claude Code](https://github.com/anthropics/claude-code), [Codex](https://github.com/openai/codex), [Gemini](https://github.com/google-gemini/gemini-cli) (and other local agents including [Aider](https://github.com/Aider-AI/aider)) in separate workspaces, allowing you to work on multiple tasks simultaneously.
 
 
-![Claude Squad Screenshot](assets/screenshot.png)
+![DeepSeek Squad Screenshot](assets/screenshot.png)
 
 ### Highlights
 - Complete tasks in the background (including yolo / auto-accept mode!)
@@ -19,29 +19,29 @@ https://github.com/user-attachments/assets/aef18253-e58f-4525-9032-f5a3d66c975a
 
 ### Installation
 
-Both Homebrew and manual installation will install Claude Squad as `cs` on your system.
+Both Homebrew and manual installation will install DeepSeek Squad as `ds` on your system.
 
 #### Homebrew
 
 ```bash
-brew install claude-squad
-ln -s "$(brew --prefix)/bin/claude-squad" "$(brew --prefix)/bin/cs"
+brew install deepseek-squad
+ln -s "$(brew --prefix)/bin/deepseek-squad" "$(brew --prefix)/bin/ds"
 ```
 
 #### Manual
 
-Claude Squad can also be installed by running the following command:
+DeepSeek Squad can also be installed by running the following command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/smtg-ai/claude-squad/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jimmyflatting/deepseek-squad/main/install.sh | bash
 ```
 
-This puts the `cs` binary in `~/.local/bin`.
+This puts the `ds` binary in `~/.local/bin`.
 
 To use a custom name for the binary:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/smtg-ai/claude-squad/main/install.sh | bash -s -- --name <your-binary-name>
+curl -fsSL https://raw.githubusercontent.com/jimmyflatting/deepseek-squad/main/install.sh | bash -s -- --name <your-binary-name>
 ```
 
 ### Prerequisites
@@ -53,19 +53,19 @@ curl -fsSL https://raw.githubusercontent.com/smtg-ai/claude-squad/main/install.s
 
 ```
 Usage:
-  cs [flags]
-  cs [command]
+  ds [flags]
+  ds [command]
 
 Available Commands:
   completion  Generate the autocompletion script for the specified shell
   debug       Print debug information like config paths
   help        Help about any command
   reset       Reset all stored instances
-  version     Print the version number of claude-squad
+  version     Print the version number of deepseek-squad
 
 Flags:
   -y, --autoyes          [experimental] If enabled, all instances will automatically accept prompts for claude code & aider
-  -h, --help             help for claude-squad
+  -h, --help             help for deepseek-squad
   -p, --program string   Program to run in new instances (e.g. 'aider --model ollama_chat/gemma3:1b')
 ```
 
@@ -78,13 +78,13 @@ NOTE: The default program is `claude` and we recommend using the latest version.
 
 <br />
 
-<b>Using Claude Squad with other AI assistants:</b>
+<b>Using DeepSeek Squad with other AI assistants:</b>
 - For [Codex](https://github.com/openai/codex): Set your API key with `export OPENAI_API_KEY=<your_key>`
 - Launch with specific assistants:
-   - Codex: `cs -p "codex"`
-   - Aider: `cs -p "aider ..."`
-   - Gemini: `cs -p "gemini"`
-- Make this the default, by modifying the config file (locate with `cs debug`)
+   - Codex: `ds -p "codex"`
+   - Aider: `ds -p "aider ..."`
+   - Gemini: `ds -p "gemini"`
+- Make this the default, by modifying the config file (locate with `ds debug`)
 
 <br />
 
@@ -112,7 +112,7 @@ The menu at the bottom of the screen shows available commands:
 
 ### Configuration
 
-Claude Squad stores its configuration in `~/.claude-squad/config.json`. You can find the exact path by running `cs debug`.
+DeepSeek Squad stores its configuration in `~/.deepseek-squad/config.json`. You can find the exact path by running `cs debug`.
 
 #### Profiles
 
@@ -138,7 +138,7 @@ Each profile has two fields:
 | `name`    | Display name shown in the profile picker                 |
 | `program` | Shell command used to launch the agent for that profile  |
 
-If no profiles are defined, Claude Squad uses `default_program` directly as the launch command (the default is `claude`).
+If no profiles are defined, DeepSeek Squad uses `default_program` directly as the launch command (the default is `claude`).
 
 ### Custom API Endpoints
 
@@ -176,4 +176,4 @@ underlying program (ex. `claude`) to the latest version.
 
 ### Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=smtg-ai/claude-squad&type=Date)](https://www.star-history.com/#smtg-ai/claude-squad&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=jimmyflatting/deepseek-squad&type=Date)](https://www.star-history.com/#jimmyflatting/deepseek-squad&Date)
