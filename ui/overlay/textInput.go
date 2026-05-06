@@ -1,7 +1,7 @@
 package overlay
 
 import (
-	"claude-squad/config"
+	"deepseek-squad/config"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textarea"

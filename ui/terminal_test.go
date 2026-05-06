@@ -1,10 +1,10 @@
 package ui
 
 import (
-	"claude-squad/cmd/cmd_test"
-	"claude-squad/log"
-	"claude-squad/session"
-	"claude-squad/session/tmux"
+	"deepseek-squad/cmd/cmd_test"
+	"deepseek-squad/log"
+	"deepseek-squad/session"
+	"deepseek-squad/session/tmux"
 	"fmt"
 	"os/exec"
 	"strings"

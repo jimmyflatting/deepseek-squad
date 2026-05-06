@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"claude-squad/session"
+	"deepseek-squad/session"
 	"fmt"
 	"strings"
 

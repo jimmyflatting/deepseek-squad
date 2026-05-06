@@ -3,7 +3,7 @@
 package tmux
 
 import (
-	"claude-squad/log"
+	"deepseek-squad/log"
 	"os"
 	"os/signal"
 	"syscall"

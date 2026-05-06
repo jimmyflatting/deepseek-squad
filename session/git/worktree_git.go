@@ -1,7 +1,7 @@
 package git
 
 import (
-	"claude-squad/log"
+	"deepseek-squad/log"
 	"fmt"
 	"os/exec"
 	"strings"

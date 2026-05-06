@@ -1,9 +1,9 @@
 package ui
 
 import (
-	"claude-squad/log"
-	"claude-squad/session"
-	"claude-squad/session/tmux"
+	"deepseek-squad/log"
+	"deepseek-squad/session"
+	"deepseek-squad/session/tmux"
 	"fmt"
 	"os"
 	"strings"

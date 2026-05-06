@@ -1,8 +1,8 @@
 package git
 
 import (
-	"claude-squad/config"
-	"claude-squad/log"
+	"deepseek-squad/config"
+	"deepseek-squad/log"
 	"fmt"
 	"path/filepath"
 	"time"
