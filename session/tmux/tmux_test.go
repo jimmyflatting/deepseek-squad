@@ -81,9 +81,9 @@ func TestStartTmuxSession(t *testing.T) {
 	require.Equal(t, "tmux attach-session -t deepseeksquad_test-session",
 		cmd2.ToString(ptyFactory.cmds[1]))
 
-	// Verify send-keys commands were issued for the program
-	require.Contains(t, recordedCmds, "tmux send-keys -t deepseeksquad_test-session -l claude")
-	require.Contains(t, recordedCmds, "tmux send-keys -t deepseeksquad_test-session Enter")
+		// Verify new-window and kill-window commands were issued for the program
+		require.Contains(t, recordedCmds, fmt.Sprintf("tmux new-window -t deepseeksquad_test-session -d -c %s -- claude", workdir))
+		require.Contains(t, recordedCmds, "tmux kill-window -t deepseeksquad_test-session:0")
 
 	require.Equal(t, 2, len(ptyFactory.files))
 
@@ -259,12 +259,134 @@ func TestExistingStartTmuxSessionStillPasses(t *testing.T) {
 	require.Equal(t, "tmux attach-session -t deepseeksquad_test-session",
 		cmd2.ToString(ptyFactory.cmds[1]))
 
-	// Verify send-keys commands were issued
-	require.Contains(t, recordedCmds, "tmux send-keys -t deepseeksquad_test-session -l claude")
-	require.Contains(t, recordedCmds, "tmux send-keys -t deepseeksquad_test-session Enter")
+		// Verify new-window and kill-window commands were issued
+		require.Contains(t, recordedCmds, fmt.Sprintf("tmux new-window -t deepseeksquad_test-session -d -c %s -- claude", workdir))
+		require.Contains(t, recordedCmds, "tmux kill-window -t deepseeksquad_test-session:0")
 
 	// No ANTHROPIC_* vars are set in test env (or if they are, they'll be forwarded —
 	// the key assertion is that ptyFactory.cmds count and session start are unaffected)
 	// This test should not error regardless of env var presence
 	require.NoError(t, err)
+}
+
+
+func TestNewWindowWithProgramArgs(t *testing.T) {
+	ptyFactory := NewMockPtyFactory(t)
+
+	var recordedCmds []string
+	created := false
+	cmdExec := cmd_test.MockCmdExec{
+		RunFunc: func(cmd *exec.Cmd) error {
+			cmdStr := cmd2.ToString(cmd)
+			recordedCmds = append(recordedCmds, cmdStr)
+			if strings.Contains(cmdStr, "has-session") && !created {
+				created = true
+				return fmt.Errorf("session not found")
+			}
+			return nil
+		},
+		OutputFunc: func(cmd *exec.Cmd) ([]byte, error) {
+			return []byte("output"), nil
+		},
+	}
+
+	workdir := t.TempDir()
+	// Program with arguments to verify proper splitting
+	program := "aider --model ollama_chat/gemma3:1b --no-git"
+	session := newTmuxSession("test-args", program, ptyFactory, cmdExec)
+
+	err := session.Start(workdir)
+	require.NoError(t, err)
+
+	// Verify new-window uses the -- separator and all program parts
+	expectedNewWindow := fmt.Sprintf("tmux new-window -t deepseeksquad_test-args -d -c %s -- aider --model ollama_chat/gemma3:1b --no-git", workdir)
+	require.Contains(t, recordedCmds, expectedNewWindow)
+
+	// Verify kill-window is still issued
+	require.Contains(t, recordedCmds, "tmux kill-window -t deepseeksquad_test-args:0")
+
+	// Verify two-phase flow is preserved (no program in new-session)
+	require.Equal(t, 2, len(ptyFactory.cmds))
+	require.Equal(t, fmt.Sprintf("tmux new-session -d -s deepseeksquad_test-args -c %s", workdir),
+		cmd2.ToString(ptyFactory.cmds[0]))
+	require.Equal(t, "tmux attach-session -t deepseeksquad_test-args",
+		cmd2.ToString(ptyFactory.cmds[1]))
+}
+
+func TestNewWindowFailure(t *testing.T) {
+	ptyFactory := NewMockPtyFactory(t)
+
+	created := false
+	var closed bool
+	cmdExec := cmd_test.MockCmdExec{
+		RunFunc: func(cmd *exec.Cmd) error {
+			cmdStr := cmd2.ToString(cmd)
+			if strings.Contains(cmdStr, "has-session") && !created {
+				created = true
+				return fmt.Errorf("session not found")
+			}
+			// Simulate new-window failure
+			if strings.Contains(cmdStr, "new-window") {
+				return fmt.Errorf("failed to create new window")
+			}
+			// Track if Close() cleanup (kill-session) was called
+			if strings.Contains(cmdStr, "kill-session") {
+				closed = true
+			}
+			return nil
+		},
+		OutputFunc: func(cmd *exec.Cmd) ([]byte, error) {
+			return []byte("output"), nil
+		},
+	}
+
+	workdir := t.TempDir()
+	session := newTmuxSession("test-fail", "claude", ptyFactory, cmdExec)
+
+	err := session.Start(workdir)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "creating new window")
+	// Verify cleanup was attempted (Close -> kill-session)
+	require.True(t, closed, "expected kill-session cleanup after new-window failure")
+}
+
+func TestKillWindowFailure(t *testing.T) {
+	ptyFactory := NewMockPtyFactory(t)
+
+	var recordedCmds []string
+	created := false
+	cmdExec := cmd_test.MockCmdExec{
+		RunFunc: func(cmd *exec.Cmd) error {
+			cmdStr := cmd2.ToString(cmd)
+			recordedCmds = append(recordedCmds, cmdStr)
+			if strings.Contains(cmdStr, "has-session") && !created {
+				created = true
+				return fmt.Errorf("session not found")
+			}
+			// Simulate kill-window failure only
+			if strings.Contains(cmdStr, "kill-window") {
+				return fmt.Errorf("window not found")
+			}
+			return nil
+		},
+		OutputFunc: func(cmd *exec.Cmd) ([]byte, error) {
+			return []byte("output"), nil
+		},
+	}
+
+	workdir := t.TempDir()
+	session := newTmuxSession("test-kill-fail", "claude", ptyFactory, cmdExec)
+
+	err := session.Start(workdir)
+	// kill-window failure is non-fatal, so Start should succeed
+	require.NoError(t, err)
+
+	// Verify kill-window was attempted
+	require.Contains(t, recordedCmds, "tmux kill-window -t deepseeksquad_test-kill-fail:0")
+
+	// Verify new-window succeeded
+	require.Contains(t, recordedCmds, fmt.Sprintf("tmux new-window -t deepseeksquad_test-kill-fail -d -c %s -- claude", workdir))
+
+	// Verify session startup was not interrupted
+	require.Equal(t, 2, len(ptyFactory.cmds))
 }

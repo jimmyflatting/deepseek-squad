@@ -210,7 +210,9 @@ func (t *TmuxSession) Start(workDir string) error {
 		// no longer needed. This failure is non-fatal (logged as warning).
 		killWindowCmd := exec.Command("tmux", "kill-window", "-t", fmt.Sprintf("%s:0", t.sanitizedName))
 		if err := t.cmdExec.Run(killWindowCmd); err != nil {
-			log.InfoLog.Printf("Warning: failed to kill initial window for session %s: %v", t.sanitizedName, err)
+			if log.InfoLog != nil {
+				log.InfoLog.Printf("Warning: failed to kill initial window for session %s: %v", t.sanitizedName, err)
+			}
 		}
 	}
 
