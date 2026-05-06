@@ -52,10 +52,13 @@ func TestSanitizeName(t *testing.T) {
 func TestStartTmuxSession(t *testing.T) {
 	ptyFactory := NewMockPtyFactory(t)
 
+	var recordedCmds []string
 	created := false
 	cmdExec := cmd_test.MockCmdExec{
 		RunFunc: func(cmd *exec.Cmd) error {
-			if strings.Contains(cmd.String(), "has-session") && !created {
+			cmdStr := cmd2.ToString(cmd)
+			recordedCmds = append(recordedCmds, cmdStr)
+			if strings.Contains(cmdStr, "has-session") && !created {
 				created = true
 				return fmt.Errorf("session already exists")
 			}
@@ -72,10 +75,15 @@ func TestStartTmuxSession(t *testing.T) {
 	err := session.Start(workdir)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(ptyFactory.cmds))
-	require.Equal(t, fmt.Sprintf("tmux new-session -d -s deepseeksquad_test-session -c %s claude", workdir),
+	// new-session should NOT include the program (two-phase flow)
+	require.Equal(t, fmt.Sprintf("tmux new-session -d -s deepseeksquad_test-session -c %s", workdir),
 		cmd2.ToString(ptyFactory.cmds[0]))
 	require.Equal(t, "tmux attach-session -t deepseeksquad_test-session",
 		cmd2.ToString(ptyFactory.cmds[1]))
+
+	// Verify send-keys commands were issued for the program
+	require.Contains(t, recordedCmds, "tmux send-keys -t deepseeksquad_test-session -l claude")
+	require.Contains(t, recordedCmds, "tmux send-keys -t deepseeksquad_test-session Enter")
 
 	require.Equal(t, 2, len(ptyFactory.files))
 
@@ -135,9 +143,9 @@ func TestForwardEnvVarsWithMatchingPrefix(t *testing.T) {
 		require.NotContains(t, cmdStr, "ZZ_UNRELATED_VAR")
 	}
 
-	// Verify the session was properly started (same assertions as TestStartTmuxSession)
+	// Verify the session was properly started (two-phase: no program in new-session)
 	require.Equal(t, 2, len(ptyFactory.cmds))
-	require.Equal(t, fmt.Sprintf("tmux new-session -d -s deepseeksquad_test-forward-env -c %s claude", workdir),
+	require.Equal(t, fmt.Sprintf("tmux new-session -d -s deepseeksquad_test-forward-env -c %s", workdir),
 		cmd2.ToString(ptyFactory.cmds[0]))
 	require.Equal(t, "tmux attach-session -t deepseeksquad_test-forward-env",
 		cmd2.ToString(ptyFactory.cmds[1]))
@@ -213,17 +221,19 @@ func TestForwardEnvVarsWithEmptyPrefixes(t *testing.T) {
 
 func TestExistingStartTmuxSessionStillPasses(t *testing.T) {
 	// This test verifies that the existing TestStartTmuxSession behavior is preserved
-	// despite the new env var forwarding logic. The session uses default prefixes (ANTHROPIC_)
-	// but no ANTHROPIC_* vars are set during this test, so no forwarding should occur.
+	// despite the new env var forwarding and two-phase start logic. The session uses
+	// default prefixes (ANTHROPIC_) but no ANTHROPIC_* vars are set during this test,
+	// so no forwarding should occur.
 	ptyFactory := NewMockPtyFactory(t)
 
+	var recordedCmds []string
 	created := false
-	var recordedEnvCmds []string
 	cmdExec := cmd_test.MockCmdExec{
 		RunFunc: func(cmd *exec.Cmd) error {
 			cmdStr := cmd2.ToString(cmd)
+			recordedCmds = append(recordedCmds, cmdStr)
 			if strings.Contains(cmdStr, "set-environment") {
-				recordedEnvCmds = append(recordedEnvCmds, cmdStr)
+				// Recorded but not asserted on
 			}
 			if strings.Contains(cmdStr, "has-session") && !created {
 				created = true
@@ -242,12 +252,16 @@ func TestExistingStartTmuxSessionStillPasses(t *testing.T) {
 	err := session.Start(workdir)
 	require.NoError(t, err)
 
-	// Verify same assertions as original TestStartTmuxSession
+	// Verify same assertions as original TestStartTmuxSession (two-phase flow)
 	require.Equal(t, 2, len(ptyFactory.cmds))
-	require.Equal(t, fmt.Sprintf("tmux new-session -d -s deepseeksquad_test-session -c %s claude", workdir),
+	require.Equal(t, fmt.Sprintf("tmux new-session -d -s deepseeksquad_test-session -c %s", workdir),
 		cmd2.ToString(ptyFactory.cmds[0]))
 	require.Equal(t, "tmux attach-session -t deepseeksquad_test-session",
 		cmd2.ToString(ptyFactory.cmds[1]))
+
+	// Verify send-keys commands were issued
+	require.Contains(t, recordedCmds, "tmux send-keys -t deepseeksquad_test-session -l claude")
+	require.Contains(t, recordedCmds, "tmux send-keys -t deepseeksquad_test-session Enter")
 
 	// No ANTHROPIC_* vars are set in test env (or if they are, they'll be forwarded —
 	// the key assertion is that ptyFactory.cmds count and session start are unaffected)
