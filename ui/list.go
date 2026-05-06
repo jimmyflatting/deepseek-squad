@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"claude-squad/log"
-	"claude-squad/session"
+	"deepseek-squad/log"
+	"deepseek-squad/session"
 	"errors"
 	"fmt"
 	"strings"

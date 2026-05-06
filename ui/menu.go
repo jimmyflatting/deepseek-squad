@@ -1,10 +1,10 @@
 package ui
 
 import (
-	"claude-squad/keys"
+	"deepseek-squad/keys"
 	"strings"
 
-	"claude-squad/session"
+	"deepseek-squad/session"
 
 	"github.com/charmbracelet/lipgloss"
 )

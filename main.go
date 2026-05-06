@@ -1,14 +1,14 @@
 package main
 
 import (
-	"claude-squad/app"
-	cmd2 "claude-squad/cmd"
-	"claude-squad/config"
-	"claude-squad/daemon"
-	"claude-squad/log"
-	"claude-squad/session"
-	"claude-squad/session/git"
-	"claude-squad/session/tmux"
+	"deepseek-squad/app"
+	cmd2 "deepseek-squad/cmd"
+	"deepseek-squad/config"
+	"deepseek-squad/daemon"
+	"deepseek-squad/log"
+	"deepseek-squad/session"
+	"deepseek-squad/session/git"
+	"deepseek-squad/session/tmux"
 	"context"
 	"encoding/json"
 	"fmt"

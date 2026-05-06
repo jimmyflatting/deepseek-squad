@@ -1,9 +1,9 @@
 package daemon
 
 import (
-	"claude-squad/config"
-	"claude-squad/log"
-	"claude-squad/session"
+	"deepseek-squad/config"
+	"deepseek-squad/log"
+	"deepseek-squad/session"
 	"fmt"
 	"os"
 	"os/exec"

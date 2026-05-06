@@ -1,11 +1,11 @@
 package app
 
 import (
-	"claude-squad/config"
-	"claude-squad/log"
-	"claude-squad/session"
-	"claude-squad/ui"
-	"claude-squad/ui/overlay"
+	"deepseek-squad/config"
+	"deepseek-squad/log"
+	"deepseek-squad/session"
+	"deepseek-squad/ui"
+	"deepseek-squad/ui/overlay"
 	"context"
 	"fmt"
 	"os"

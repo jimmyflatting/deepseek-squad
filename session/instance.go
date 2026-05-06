@@ -1,9 +1,9 @@
 package session
 
 import (
-	"claude-squad/log"
-	"claude-squad/session/git"
-	"claude-squad/session/tmux"
+	"deepseek-squad/log"
+	"deepseek-squad/session/git"
+	"deepseek-squad/session/tmux"
 	"path/filepath"
 
 	"fmt"
