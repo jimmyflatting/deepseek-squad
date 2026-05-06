@@ -57,7 +57,7 @@ type TmuxSession struct {
 	wg     *sync.WaitGroup
 }
 
-const TmuxPrefix = "claudesquad_"
+const TmuxPrefix = "deepseeksquad_"
 
 var whiteSpaceRegex = regexp.MustCompile(`\s+`)
 
